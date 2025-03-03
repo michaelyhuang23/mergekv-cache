@@ -1,7 +1,9 @@
 # Q-Filters: Leveraging Query-Key Geometry for Efficient Key-Value Cache Compression
 [![arXiv](https://img.shields.io/badge/arXiv-1234.56789-b31b1b.svg)](https://arxiv.org/abs/1234.56789) 
 
-![Q-Filters Demo GIF](qfilters_demo.gif)
+<p align="center">
+  <img width=50% height=auto src="qfilters_demo.gif" />
+</p>
 
 ## Setup
 1. Install required libraries in a virtual environment:
