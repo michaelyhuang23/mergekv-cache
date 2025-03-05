@@ -84,3 +84,16 @@ python make_filters.py \
 ```bash
 huggingface-cli upload path_to_hf_repo path_to_local_qfilters .
 ```
+
+## Citation
+```bibtex
+@misc{godey2025qfiltersleveragingqkgeometry,
+      title={Q-Filters: Leveraging QK Geometry for Efficient KV Cache Compression}, 
+      author={Nathan Godey and Alessio Devoto and Yu Zhao and Simone Scardapane and Pasquale Minervini and Éric de la Clergerie and Benoît Sagot},
+      year={2025},
+      eprint={2503.02812},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2503.02812}, 
+}
+```
