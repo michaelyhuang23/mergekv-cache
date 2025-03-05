@@ -1,5 +1,5 @@
 # Q-Filters: Leveraging Query-Key Geometry for Efficient Key-Value Cache Compression
-<a href="https://arxiv.org/abs/2503.02812" target="_blank">[![arXiv](https://img.shields.io/badge/arXiv-2503.02812-b31b1b.svg)] </a>
+<a href="https://arxiv.org/abs/2503.02812" target="_blank">![arXiv](https://img.shields.io/badge/arXiv-2503.02812-b31b1b.svg)</a>
 
 <p align="center">
   <img width=50% height=auto src="qfilters_demo.gif" />
