@@ -8,7 +8,7 @@ from datasets import load_dataset
 import torch
 
 import modeling as M
-from utils import QFilters
+from src.utils import QFilters
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
