@@ -7,7 +7,8 @@ model = AutoModelForCausalLM.from_pretrained(
     model_name, 
     device_map="auto",
     low_cpu_mem_usage=True,
-    torch_dtype="bfloat16"
+    torch_dtype="bfloat16",
+    attn_implementation="flash_attention_2"
 )
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -18,15 +19,15 @@ input_text = f"<|User|>{question}<|Assistant|><think>\n"
 
 inputs = tokenizer(input_text, return_tensors="pt").to(model.device)
 
-# past_key_values = QFiltersCache(
-#     window_length=64,
-#     max_length=128,
-#     model_name=model_name
-# )
-past_key_values = KNormCache(
+past_key_values = QFiltersCache(
     window_length=64,
     max_length=128,
+    model_name=model_name
 )
+# past_key_values = KNormCache(
+#     window_length=64,
+#     max_length=128,
+# )
 
 
 out = model.generate(

@@ -1,0 +1,22 @@
+=== RULER Benchmark Evaluation ===
+Model: deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+Compression ratio: 8x
+Max sequence length: 8192
+Output directory: results
+Timestamp: 20250326_145807
+
+No specific compression method specified, running both Q-Filters and K-norm...
+Loading model deepseek-ai/DeepSeek-R1-Distill-Llama-8B...
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:06<00:06,  6.72s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:11<00:00,  5.44s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:11<00:00,  5.63s/it]
+Using Q-Filters compression with ratio 8x
+Running RULER benchmark with q_filters compression...
+Traceback (most recent call last):
+  File "/home/dhruv/kvcash/scripts/run_ruler_benchmark.py", line 149, in <module>
+    main() 
+  File "/home/dhruv/kvcash/scripts/run_ruler_benchmark.py", line 129, in main
+    results["q_filters"] = run_evaluation(args, model, tokenizer, "q_filters")
+  File "/home/dhruv/kvcash/scripts/run_ruler_benchmark.py", line 96, in run_evaluation
+    results = evaluator.simple_evaluate(
+  File "/home/dhruv/ttft/eval/lm-evaluation-harness/lm_eval/utils.py", line 397, in _wrapper
+    return fn(*args, **kwargs)
+TypeError: simple_evaluate() got an unexpected keyword argument 'task_config'
