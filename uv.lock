@@ -815,6 +815,7 @@ dependencies = [
     { name = "urllib3" },
     { name = "wcwidth" },
     { name = "wheel" },
+    { name = "wonderwords" },
     { name = "xxhash" },
     { name = "yarl" },
 ]
@@ -930,6 +931,7 @@ requires-dist = [
     { name = "urllib3", specifier = "==2.2.3" },
     { name = "wcwidth", specifier = "==0.2.13" },
     { name = "wheel", specifier = ">=0.45.1" },
+    { name = "wonderwords", specifier = ">=2.2.0" },
     { name = "xxhash", specifier = "==3.5.0" },
     { name = "yarl", specifier = "==1.18.0" },
 ]
@@ -2275,6 +2277,15 @@ source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/74/b3/46a2508fff83b5affb5a311797c584c494b4b0c4c8796a1afa2c1b1e03ac/windows_curses-2.4.1-cp311-cp311-win32.whl", hash = "sha256:4fa1a176bfcf098d0c9bb7bc03dce6e83a4257fc0c66ad721f5745ebf0c00746", size = 71129 },
     { url = "https://files.pythonhosted.org/packages/50/29/fd7c0c80177d8df55f841504a5f332b95b0002c80f82055913b6caac94e6/windows_curses-2.4.1-cp311-cp311-win_amd64.whl", hash = "sha256:fd7d7a9cf6c1758f46ed76b8c67f608bc5fcd5f0ca91f1580fd2d84cf41c7f4f", size = 81431 },
+]
+
+[[package]]
+name = "wonderwords"
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/ed/d5f4336a7b1b416d5c502a6ed323f02acdb5e67467ef8f5e80ea6617fe3e/wonderwords-2.2.0.tar.gz", hash = "sha256:0b7ec6f591062afc55603bfea71463afbab06794b3064d9f7b04d0ce251a13d0", size = 50579 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b4/a4/6a7705c6e17de71e45782a0284e06691f85350adb80b1dea9c027c07f024/wonderwords-2.2.0-py3-none-any.whl", hash = "sha256:65fc665f1f5590e98f6d9259414ea036bf1b6dd83e51aa6ba44473c99ca92da1", size = 44970 },
 ]
 
 [[package]]

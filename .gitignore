@@ -1,1 +1,6 @@
 __pycache__/
+results/
+.venv/
+.vscode/
+.idea/
+src/__pycache__/

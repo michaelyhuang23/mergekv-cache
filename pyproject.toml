@@ -114,6 +114,7 @@ dependencies = [
     "urllib3==2.2.3",
     "wcwidth==0.2.13",
     "wheel>=0.45.1",
+    "wonderwords>=2.2.0",
     "xxhash==3.5.0",
     "yarl==1.18.0",
 ]
