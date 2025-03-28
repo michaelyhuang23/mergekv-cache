@@ -42,6 +42,9 @@ def setup_model(args, compression_method):
     
     # Load the model and tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name,
         device_map=args.device,
@@ -50,33 +53,65 @@ def setup_model(args, compression_method):
         attn_implementation="flash_attention_2"
     )
     
-    if compression_method == "q_filters":
-        print(f"Using Q-Filters compression with ratio {args.compression_ratio}x")
-        model.past_key_values = QFiltersCache(
-            max_length=max_length,
-            window_length=window_length,
-            model_name=args.model_name
-        )
-    elif compression_method == "k_norm":
-        print(f"Using K-norm compression with ratio {args.compression_ratio}x")
-        model.past_key_values = KNormCache(
-            max_length=max_length,
-            window_length=window_length
+    # Create a custom HFLM wrapper class that applies KV cache during forward pass
+    class CustomCacheHFLM(HFLM):
+        def __init__(self, cache_type, pretrained=None, tokenizer=None, batch_size=1):
+            super().__init__(pretrained=pretrained, tokenizer=tokenizer, batch_size=batch_size)
+            self.cache_type = cache_type
+            
+            # Initialize appropriate cache based on method
+            if cache_type == "q_filters":
+                print(f"Using Q-Filters compression with ratio {args.compression_ratio}x")
+                self.kv_cache = QFiltersCache(
+                    max_length=max_length,
+                    window_length=window_length,
+                    model_name=args.model_name
+                )
+            elif cache_type == "k_norm":
+                print(f"Using K-norm compression with ratio {args.compression_ratio}x")
+                self.kv_cache = KNormCache(
+                    max_length=max_length,
+                    window_length=window_length
+                )
+            else:
+                print("Using no compression (standard KV cache)")
+                self.kv_cache = None
+        
+        def generate(self, *args, **kwargs):
+            """Override the _model_call method to use our custom KV cache"""
+            return self.model.generate(*args, **kwargs, past_key_values=self.kv_cache)
+        
+        def forward(self, *args, **kwargs):
+            """Override the forward method to use our custom KV cache"""
+            return self.model.forward(*args, **kwargs, past_key_values=self.kv_cache)
+    
+    # Create the appropriate model wrapper
+    if compression_method in ["q_filters", "k_norm"]:
+        model_wrapper = CustomCacheHFLM(
+            cache_type=compression_method,
+            pretrained=model,
+            tokenizer=tokenizer,
+            batch_size=args.batch_size
         )
     else:
-        print("Using no compression (standard KV cache)")
+        # For baseline, use the standard HFLM wrapper
+        model_wrapper = HFLM(
+            pretrained=model,
+            tokenizer=tokenizer,
+            batch_size=args.batch_size
+        )
     
-    return model, tokenizer
+    return model_wrapper, model, tokenizer
 
-def run_evaluation(args, model, tokenizer, method_name):
+def run_evaluation(args, model_wrapper, model, tokenizer, method_name):
     print(f"Running evaluation for method: {method_name}")
     
-    # Use the ruler task with the specified max_seq_length
-    task_name = f"ruler"
+    # Specify which RULER task to run (based on sequence length)
+    task_name = "ruler"
     
     # Run the evaluation
     results = evaluator.simple_evaluate(
-        model=HFLM(pretrained=model, tokenizer=tokenizer),
+        model=model_wrapper,
         model_args=f"max_seq_length={32768},tokenizer={args.model_name},pretrained={args.model_name}",
         tasks=[task_name],
         num_fewshot=0,
@@ -91,6 +126,10 @@ def run_evaluation(args, model, tokenizer, method_name):
         json.dump(results, f, indent=2)
     
     print(f"Results saved to {output_path}")
+    
+    # Cleanup to prevent memory leaks
+    del model_wrapper
+    
     return results
 
 def main():
@@ -102,42 +141,51 @@ def main():
     # Run evaluations for specified compression methods
     results = {}
     
-    if args.use_q_filters:
-        model, tokenizer = setup_model(args, "q_filters")
-        try:
-            results["q_filters"] = run_evaluation(args, model, tokenizer, "q_filters")
-        except Exception as e:
-            print(f"Error during Q-Filters evaluation: {e}")
-        finally:
-            # Free up GPU memory
-            del model
-            torch.cuda.empty_cache()
-    
-    if args.use_k_norm:
-        model, tokenizer = setup_model(args, "k_norm")
-        try:
-            results["k_norm"] = run_evaluation(args, model, tokenizer, "k_norm")
-        except Exception as e:
-            print(f"Error during K-norm evaluation: {e}")
-        finally:
-            # Free up GPU memory
-            del model
-            torch.cuda.empty_cache()
-    
-    # Run evaluation with no compression for baseline if neither method is specified
-    if not (args.use_q_filters or args.use_k_norm):
-        model, tokenizer = setup_model(args, "none")
-        results["none"] = run_evaluation(args, model, tokenizer, "none")
-        # try:
-        #     results["none"] = run_evaluation(args, model, tokenizer, "none")
-        # except Exception as e:
-        #     print(f"Error during baseline evaluation: {e}")
-        # finally:
-        #     # Free up GPU memory
-        #     del model
-        #     torch.cuda.empty_cache()
-    
-    print("All evaluations completed.")
+    try:
+        if args.use_q_filters:
+            model_wrapper, model, tokenizer = setup_model(args, "q_filters")
+            try:
+                results["q_filters"] = run_evaluation(args, model_wrapper, model, tokenizer, "q_filters")
+            except Exception as e:
+                print(f"Error during Q-Filters evaluation: {e}")
+            finally:
+                # Free up GPU memory
+                del model_wrapper
+                del model
+                torch.cuda.empty_cache()
+        
+        if args.use_k_norm:
+            model_wrapper, model, tokenizer = setup_model(args, "k_norm")
+            try:
+                results["k_norm"] = run_evaluation(args, model_wrapper, model, tokenizer, "k_norm")
+            except Exception as e:
+                print(f"Error during K-norm evaluation: {e}")
+            finally:
+                # Free up GPU memory
+                del model_wrapper
+                del model
+                torch.cuda.empty_cache()
+        
+        # Run evaluation with no compression for baseline if neither method is specified
+        if not (args.use_q_filters or args.use_k_norm):
+            model_wrapper, model, tokenizer = setup_model(args, "none")
+            try:
+                results["none"] = run_evaluation(args, model_wrapper, model, tokenizer, "none")
+            except Exception as e:
+                print(f"Error during baseline evaluation: {e}")
+            finally:
+                # Free up GPU memory
+                del model_wrapper
+                del model
+                torch.cuda.empty_cache()
+        
+        print("All evaluations completed.")
+    except KeyboardInterrupt:
+        print("\nEvaluation interrupted by user.")
+    except Exception as e:
+        print(f"Unexpected error during evaluation: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main() 

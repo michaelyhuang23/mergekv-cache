@@ -2,12 +2,12 @@
 # Wrapper script to evaluate language modeling perplexity with different compression methods
 
 # Default parameters
-MODEL_NAME="meta-llama/Llama-2-7b-hf"
-COMPRESSION_RATIO=8
-KV_CACHE_SIZE=512
+MODEL_NAME="meta-llama/Llama-3.1-8B-Instruct"
+WINDOW_SIZE=512
+TOPK=32
 MAX_SEQ_LENGTH=2048
 OUTPUT_DIR="perplexity_results"
-NUM_SEQUENCES=20
+NUM_SEQUENCES=5
 BATCH_SIZE=1
 DEVICE="cuda:0"
 
@@ -21,12 +21,12 @@ while [[ $# -gt 0 ]]; do
       MODEL_NAME="$2"
       shift 2
       ;;
-    --ratio)
-      COMPRESSION_RATIO="$2"
+    --window)
+      WINDOW_SIZE="$2"
       shift 2
       ;;
-    --cache_size)
-      KV_CACHE_SIZE="$2"
+    --topk)
+      TOPK="$2"
       shift 2
       ;;
     --max_seq_length)
@@ -83,15 +83,15 @@ while [[ $# -gt 0 ]]; do
     --help)
       echo "Usage: $0 [options]"
       echo "Options:"
-      echo "  --model MODEL_NAME        Model name or path (default: meta-llama/Llama-2-7b-hf)"
-      echo "  --ratio RATIO             Compression ratio (default: 8)"
-      echo "  --cache_size SIZE         Maximum KV cache size (default: 512)"
+      echo "  --model MODEL_NAME        Model name or path (default: meta-llama/Llama-3.1-8B-Instruct)"
+      echo "  --window SIZE             Window size for recent tokens (default: 512)"
+      echo "  --topk SIZE               Number of filtered tokens to keep (default: 32)"
       echo "  --max_seq_length LENGTH   Maximum sequence length (default: 2048)"
       echo "  --output_dir DIR          Output directory (default: perplexity_results)"
-      echo "  --num_sequences COUNT     Number of sequences to evaluate (default: 20)"
+      echo "  --num_sequences COUNT     Number of sequences to evaluate (default: 5)"
       echo "  --batch_size SIZE         Batch size (default: 1)"
       echo "  --device DEVICE           Device to run on (default: cuda:0)"
-      echo "  --dataset NAME            HuggingFace dataset name (default: NeelNanda/pile-small)"
+      echo "  --dataset NAME            HuggingFace dataset name (default: NeelNanda/pile-10k)"
       echo "  --q_filters               Use Q-Filters compression"
       echo "  --k_norm                  Use K-norm compression"
       echo "  --streaming_llm           Use StreamingLLM approach"
@@ -116,8 +116,8 @@ LOG_FILE="${OUTPUT_DIR}/perplexity_eval_${TIMESTAMP}.log"
 
 echo "=== Language Modeling Perplexity Evaluation ===" | tee -a "$LOG_FILE"
 echo "Model: $MODEL_NAME" | tee -a "$LOG_FILE"
-echo "Compression ratio: ${COMPRESSION_RATIO}x" | tee -a "$LOG_FILE"
-echo "KV Cache size: $KV_CACHE_SIZE" | tee -a "$LOG_FILE"
+echo "Window size: $WINDOW_SIZE" | tee -a "$LOG_FILE"
+echo "TopK: $TOPK" | tee -a "$LOG_FILE"
 echo "Max sequence length: $MAX_SEQ_LENGTH" | tee -a "$LOG_FILE"
 echo "Number of sequences: $NUM_SEQUENCES" | tee -a "$LOG_FILE"
 echo "Output directory: $OUTPUT_DIR" | tee -a "$LOG_FILE"
@@ -126,8 +126,8 @@ echo "" | tee -a "$LOG_FILE"
 
 # Build common command arguments
 CMD_ARGS="--model_name $MODEL_NAME \
-  --compression_ratio $COMPRESSION_RATIO \
-  --kv_cache_size $KV_CACHE_SIZE \
+  --window_size $WINDOW_SIZE \
+  --topk $TOPK \
   --max_seq_length $MAX_SEQ_LENGTH \
   --output_dir $OUTPUT_DIR \
   --num_sequences $NUM_SEQUENCES \
@@ -160,7 +160,7 @@ if [ "$USE_STREAMING_LLM" = true ]; then
 fi
 
 if [ "$USE_BASELINE" = true ]; then
-  METHODS_FLAGS="$METHODS_FLAGS"  # No specific flag needed for baseline
+  METHODS_FLAGS="$METHODS_FLAGS --use_baseline"
 fi
 
 # If no method is specified, run baseline only

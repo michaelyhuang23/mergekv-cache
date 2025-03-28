@@ -83,7 +83,7 @@ with torch.no_grad():
         if sample_count < num_sequences:
             with torch.autocast(device_type=device, dtype=torch.bfloat16):
                 out_repr = model(input_ids).past_key_values
-            for j, (query, key) in enumerate(out_repr):
+            for j, (query, key) in enumerate(out_repr): # TODO These are KV not QK!!
                 num_k_heads = key.shape[1]
                 svd_filters[j].append(query.flatten(0, 1).cpu())
         else:
