@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from lm_eval import evaluator
 from lm_eval.models.huggingface import HFLM
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from src.hf_cache import QFiltersCache, KNormCache
+from src.hf_cache import KNormCache
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run RULER benchmark with various KV cache compression methods")

@@ -1,5 +1,5 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer
-from src.hf_cache import QFiltersCache, KNormCache
+from src.hf_cache import KNormCache
 from datasets import load_dataset
 
 model_name = "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
