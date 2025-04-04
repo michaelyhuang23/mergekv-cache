@@ -39,10 +39,6 @@ while [[ $# -gt 0 ]]; do
       DEVICE="$2"
       shift 2
       ;;
-    --q_filters)
-      USE_Q_FILTERS=true
-      shift
-      ;;
     --k_norm)
       USE_K_NORM=true
       shift
@@ -52,7 +48,6 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --all)
-      USE_Q_FILTERS=true
       USE_K_NORM=true
       USE_BASELINE=true
       shift
@@ -66,7 +61,6 @@ while [[ $# -gt 0 ]]; do
       echo "  --output_dir DIR          Output directory (default: results)"
       echo "  --batch_size SIZE         Batch size (default: 1)"
       echo "  --device DEVICE           Device to run on (default: cuda:0)"
-      echo "  --q_filters               Use Q-Filters compression"
       echo "  --k_norm                  Use K-norm compression"
       echo "  --baseline                Run baseline without compression"
       echo "  --all                     Run all compression methods"
@@ -97,10 +91,6 @@ echo "" | tee -a "$LOG_FILE"
 # Run evaluations based on specified methods
 CMD_ARGS="--model_name $MODEL_NAME --compression_ratio $COMPRESSION_RATIO --max_seq_length $MAX_SEQ_LENGTH --output_dir $OUTPUT_DIR --batch_size $BATCH_SIZE --device $DEVICE"
 
-if [ "$USE_Q_FILTERS" = true ]; then
-  echo "Running evaluation with Q-Filters compression..." | tee -a "$LOG_FILE"
-  python scripts/run_ruler_benchmark.py $CMD_ARGS --use_q_filters 2>&1 | tee -a "$LOG_FILE"
-fi
 
 if [ "$USE_K_NORM" = true ]; then
   echo "Running evaluation with K-norm compression..." | tee -a "$LOG_FILE"
@@ -113,10 +103,10 @@ if [ "$USE_BASELINE" = true ]; then
 fi
 
 # If no method is specified, run all
-if [ -z "$USE_Q_FILTERS" ] && [ -z "$USE_K_NORM" ] && [ -z "$USE_BASELINE" ]; then
-  echo "No specific compression method specified, running both Q-Filters and K-norm..." | tee -a "$LOG_FILE"
-  python scripts/run_ruler_benchmark.py $CMD_ARGS --use_q_filters 2>&1 | tee -a "$LOG_FILE"
+if [ -z "$USE_K_NORM" ] && [ -z "$USE_BASELINE" ]; then
+  echo "No specific compression method specified, running both K-norm and baseline..." | tee -a "$LOG_FILE"
   python scripts/run_ruler_benchmark.py $CMD_ARGS --use_k_norm 2>&1 | tee -a "$LOG_FILE"
+  python scripts/run_ruler_benchmark.py $CMD_ARGS --use_baseline 2>&1 | tee -a "$LOG_FILE"
 fi
 
 echo "Evaluation completed. Results saved to $OUTPUT_DIR" | tee -a "$LOG_FILE" 

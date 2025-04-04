@@ -23,8 +23,8 @@ def parse_args():
     parser.add_argument("--compression_ratio", type=int, default=8, help="Compression ratio for KV cache (default: 8)")
     parser.add_argument("--max_seq_length", type=int, default=8192, help="Maximum sequence length for evaluation")
     parser.add_argument("--output_dir", type=str, default="results", help="Directory to save results")
-    parser.add_argument("--use_q_filters", action="store_true", help="Use Q-Filters compression")
     parser.add_argument("--use_k_norm", action="store_true", help="Use K-norm compression")
+    parser.add_argument("--use_baseline", action="store_true", help="Use baseline (no compression)")
     parser.add_argument("--batch_size", type=int, default=1, help="Batch size for evaluation")
     parser.add_argument("--device", type=str, default="cuda:0", help="Device to run evaluation on")
     return parser.parse_args()
@@ -60,22 +60,17 @@ def setup_model(args, compression_method):
             self.cache_type = cache_type
             
             # Initialize appropriate cache based on method
-            if cache_type == "q_filters":
-                print(f"Using Q-Filters compression with ratio {args.compression_ratio}x")
-                self.kv_cache = QFiltersCache(
-                    max_length=max_length,
-                    window_length=window_length,
-                    model_name=args.model_name
-                )
-            elif cache_type == "k_norm":
+            if cache_type == "k_norm":
                 print(f"Using K-norm compression with ratio {args.compression_ratio}x")
                 self.kv_cache = KNormCache(
                     max_length=max_length,
                     window_length=window_length
                 )
-            else:
+            elif cache_type == "baseline":
                 print("Using no compression (standard KV cache)")
                 self.kv_cache = None
+            else:
+                raise ValueError(f"Invalid cache type: {cache_type}")
         
         def generate(self, *args, **kwargs):
             """Override the _model_call method to use our custom KV cache"""
@@ -86,7 +81,7 @@ def setup_model(args, compression_method):
             return self.model.forward(*args, **kwargs, past_key_values=self.kv_cache)
     
     # Create the appropriate model wrapper
-    if compression_method in ["q_filters", "k_norm"]:
+    if compression_method in ["k_norm"]:
         model_wrapper = CustomCacheHFLM(
             cache_type=compression_method,
             pretrained=model,
@@ -142,18 +137,6 @@ def main():
     results = {}
     
     try:
-        if args.use_q_filters:
-            model_wrapper, model, tokenizer = setup_model(args, "q_filters")
-            try:
-                results["q_filters"] = run_evaluation(args, model_wrapper, model, tokenizer, "q_filters")
-            except Exception as e:
-                print(f"Error during Q-Filters evaluation: {e}")
-            finally:
-                # Free up GPU memory
-                del model_wrapper
-                del model
-                torch.cuda.empty_cache()
-        
         if args.use_k_norm:
             model_wrapper, model, tokenizer = setup_model(args, "k_norm")
             try:
@@ -167,10 +150,10 @@ def main():
                 torch.cuda.empty_cache()
         
         # Run evaluation with no compression for baseline if neither method is specified
-        if not (args.use_q_filters or args.use_k_norm):
-            model_wrapper, model, tokenizer = setup_model(args, "none")
+        if args.use_baseline:
+            model_wrapper, model, tokenizer = setup_model(args, "baseline")
             try:
-                results["none"] = run_evaluation(args, model_wrapper, model, tokenizer, "none")
+                results["baseline"] = run_evaluation(args, model_wrapper, model, tokenizer, "baseline")
             except Exception as e:
                 print(f"Error during baseline evaluation: {e}")
             finally:

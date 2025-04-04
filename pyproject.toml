@@ -1,7 +1,7 @@
 [project]
-name = "kvcash"
+name = "mlr-takehome"
 version = "0.1.0"
-description = "Add your description here"
+description = "Take home interview for Tilde MLR"
 readme = "README.md"
 requires-python = "<3.12, >=3.11"
 dependencies = [

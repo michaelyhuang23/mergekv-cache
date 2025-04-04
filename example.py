@@ -19,15 +19,10 @@ input_text = f"<|User|>{question}<|Assistant|><think>\n"
 
 inputs = tokenizer(input_text, return_tensors="pt").to(model.device)
 
-past_key_values = QFiltersCache(
+past_key_values = KNormCache(
     window_length=64,
     max_length=128,
-    model_name=model_name
 )
-# past_key_values = KNormCache(
-#     window_length=64,
-#     max_length=128,
-# )
 
 
 out = model.generate(
