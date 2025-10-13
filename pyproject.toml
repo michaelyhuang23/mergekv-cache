@@ -121,3 +121,8 @@ dependencies = [
 
 [tool.uv.sources]
 lm-eval = { path = "eval" }
+
+[tool.uv]
+# This tells uv to build flash-attn directly in the main environment,
+# giving it access to the installed 'torch' package.
+no-build-isolation-package = ["flash-attn"] 

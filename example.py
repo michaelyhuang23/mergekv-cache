@@ -2,7 +2,8 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer
 from src.hf_cache import KNormCache
 from datasets import load_dataset
 
-model_name = "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+# model_name = "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+model_name = "meta-llama/Llama-3.2-1B"
 model = AutoModelForCausalLM.from_pretrained(
     model_name, 
     device_map="auto",
