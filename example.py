@@ -3,7 +3,7 @@ from src.hf_cache import KNormCache
 from datasets import load_dataset
 
 # model_name = "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
-model_name = "meta-llama/Llama-3.2-1B"
+model_name = "Qwen/Qwen2.5-1.5B-Instruct"
 model = AutoModelForCausalLM.from_pretrained(
     model_name, 
     device_map="auto",
@@ -22,7 +22,7 @@ inputs = tokenizer(input_text, return_tensors="pt").to(model.device)
 
 past_key_values = KNormCache(
     window_length=64,
-    max_length=128,
+    compression_ratio=0.6
 )
 
 
@@ -32,5 +32,6 @@ out = model.generate(
     temperature=0.5, 
     max_new_tokens=4096, 
     past_key_values=past_key_values, 
+    use_cache=True,
     streamer=streamer
 )
