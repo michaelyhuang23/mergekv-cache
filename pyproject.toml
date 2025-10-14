@@ -120,7 +120,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-lm-eval = { path = "eval" }
+lm-eval = { path = "eval", editable = true }
 
 [tool.uv]
 # This tells uv to build flash-attn directly in the main environment,

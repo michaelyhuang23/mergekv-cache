@@ -7,6 +7,10 @@ from lm_eval.models.huggingface import HFLM
 from lm_eval.utils import make_table
 from datasets import load_dataset
 from lm_eval.tasks import get_task_dict
+from src.attn_patch import patched_qwen2_attn_forward
+from transformers.models.qwen2.modeling_qwen2 import Qwen2Attention
+
+Qwen2Attention.forward = patched_qwen2_attn_forward
 
 # model_name = "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
 model_name = "Qwen/Qwen2.5-1.5B"
@@ -20,26 +24,27 @@ model = AutoModelForCausalLM.from_pretrained(
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-original_forward = type(model).forward
-def patched_forward(self,*args,**kwargs):
-    if hasattr(self, "_past_key_values") and self._past_key_values is not None:
-        kwargs['past_key_values'] = self._past_key_values
-    return original_forward(self, *args, **kwargs)
-type(model).forward = patched_forward
+orig_generate = model.generate
+def patched_generate(*args, **kwargs):
+    model._active_cache = KNormCache(compression_ratio=0.9, window_length=32)
+    kwargs['past_key_values'] = model._active_cache
+    kwargs['use_cache'] = True
+    out = orig_generate(*args, **kwargs)
+    del model._active_cache
+    return out
+model.generate = patched_generate
 
-model._past_key_values = KNormCache(
-    window_length=64,
-    max_length=128,
-)
 
-task_dict = get_task_dict(["longbench_narrativeqa"])
-task = task_dict["longbench_narrativeqa"]
-task.dataset['test'] = [ex for ex in task.dataset['test'] if ex['length'] < 8000]  # crude filter
+task = get_task_dict(['longbench_gov_report'])['longbench_gov_report']
+print('total sample count', len(task.dataset['test']))
+task.dataset['test'] = [ex for ex in task.dataset['test'] if ex['length'] < 8000 and ex['length'] > 100]
+print('filtered sample count', len(task.dataset['test']))
 
-lm = HFLM(pretrained=model, tokenizer=tokenizer, batch_size=1, trust_remote_code=True, max_gen_toks=128)
+lm = HFLM(pretrained=model, tokenizer=tokenizer, batch_size=1, trust_remote_code=True)
 results = evaluator.simple_evaluate(
     model=lm,
     tasks=[task],
+    limit=1000,
     gen_kwargs={"max_length": None},
 )
 
