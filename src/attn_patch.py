@@ -55,7 +55,7 @@ def patched_qwen2_attn_forward(
                 sliding_window=sliding_window,  # main diff with Llama
                 **kwargs,
             )
-            key_states, value_states = past_key_value.clip(self.layer_idx, attn_weights=attn_weights)
+            key_states, value_states = past_key_value.clip(self.layer_idx, attn_weights=attn_weights, num_heads=key_states.shape[-3])
 
         attn_output, attn_weights = attention_interface(
             self,
@@ -71,5 +71,6 @@ def patched_qwen2_attn_forward(
 
         attn_output = attn_output.reshape(*input_shape, -1).contiguous()
         attn_output = self.o_proj(attn_output)
+
         return attn_output, attn_weights
 
