@@ -1,7 +1,7 @@
 import os
 os.environ["TOKENIZERS_PARALLELISM"]="false"
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer
-from src.hf_cache import KNormCache
+from src.hf_cache import KNormCache, MergeKV
 from lm_eval import evaluator
 from lm_eval.models.huggingface import HFLM
 from lm_eval.utils import make_table
@@ -19,14 +19,14 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map="auto",
     low_cpu_mem_usage=True,
     torch_dtype="bfloat16",
-    attn_implementation="flash_attention_2"
+    attn_implementation="eager"
 )
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 orig_generate = model.generate
 def patched_generate(*args, **kwargs):
-    model._active_cache = KNormCache(compression_ratio=0.9, window_length=32)
+    model._active_cache = MergeKV(compression_ratio=0.6, window_length=128, top_k=128)
     kwargs['past_key_values'] = model._active_cache
     kwargs['use_cache'] = True
     out = orig_generate(*args, **kwargs)
@@ -37,7 +37,7 @@ model.generate = patched_generate
 
 task = get_task_dict(['longbench_gov_report'])['longbench_gov_report']
 print('total sample count', len(task.dataset['test']))
-task.dataset['test'] = [ex for ex in task.dataset['test'] if ex['length'] < 8000 and ex['length'] > 100]
+task.dataset['test'] = [ex for ex in task.dataset['test'] if ex['length'] < 8000 and ex['length'] > 256]
 print('filtered sample count', len(task.dataset['test']))
 
 lm = HFLM(pretrained=model, tokenizer=tokenizer, batch_size=1, trust_remote_code=True)

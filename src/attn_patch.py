@@ -21,11 +21,6 @@ def patched_qwen2_attn_forward(
         cos, sin = position_embeddings
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
-        if past_key_value is not None:
-            # sin and cos are specific to RoPE models; cache_position needed for the static cache
-            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position, "query": query_states}
-            key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
-
         sliding_window = None
         if (
             self.config.use_sliding_window
@@ -43,6 +38,25 @@ def patched_qwen2_attn_forward(
                 )
             else:
                 attention_interface = ALL_ATTENTION_FUNCTIONS[self.config._attn_implementation]
+
+        if past_key_value is not None:
+            # sin and cos are specific to RoPE models; cache_position needed for the static cache
+            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+            key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+            kwargs['output_attentions'] = True
+            attn_output, attn_weights = attention_interface(
+                self,
+                query_states,
+                key_states,
+                value_states,
+                attention_mask,
+                dropout=0.0 if not self.training else self.attention_dropout,
+                scaling=self.scaling,
+                sliding_window=sliding_window,  # main diff with Llama
+                **kwargs,
+            )
+            print(query_states.shape, key_states.shape, value_states.shape)
+            key_states, value_states = past_key_value.clip(self.layer_idx, attn_weights=attn_weights)
 
         attn_output, attn_weights = attention_interface(
             self,

@@ -158,35 +158,30 @@ class MergeKV(Cache):
         """
         self.actual_len += key_states.shape[-2]
 
-        assert "query" in cache_kwargs
-        query_states = cache_kwargs["query"]
-        triangle_attn_scores = torch.einsum("bhid,bhjd->bhij", query_states, key_states) / (query_states.shape[-1] ** 0.5)
-        seq_len = query_states.size(2)
-        causal_mask = torch.tril(torch.ones(seq_len, seq_len, device=query_states.device)).bool()
-        triangle_attn_scores = triangle_attn_scores.masked_fill(~causal_mask, float("-inf"))
-        triangle_attn_scores = torch.softmax(triangle_attn_scores, dim=-1)
-        triangle_attn_scores = triangle_attn_scores.sum(dim=-2)
-        triangle_attn_count = causal_mask.sum(dim=-2)
-
         # [bsz, num_heads, seq_len, head_dim]
         if len(self.key_cache) <= layer_idx:
             # Empty cache
             self.key_cache.append(key_states)
             self.value_cache.append(value_states)
-            self.attn_cache.append(triangle_attn_scores)
-            self.attn_count.append(triangle_attn_count)
         else:
-            # Growing cache
-            attn_scores = torch.einsum("bhid,bhjd->bhij", query_states, self.key_cache[layer_idx]) / (query_states.shape[-1] ** 0.5)
-            attn_scores = torch.softmax(attn_scores, dim=-1)
-            self.attn_cache[layer_idx] += attn_scores.sum(dim=-2) # the rectangle
-            self.attn_cache[layer_idx] = torch.cat([self.attn_cache[layer_idx], triangle_attn_scores], dim=-1) # pieces the triangle with the rectangle
-            self.attn_count[layer_idx] += self.query_states.size(-2)
-            self.attn_count[layer_idx] = torch.cat([self.attn_count[layer_idx], triangle_attn_count], dim=-1)
-
             self.key_cache[layer_idx] = torch.cat([self.key_cache[layer_idx], key_states], dim=-2)
             self.value_cache[layer_idx] = torch.cat([self.value_cache[layer_idx], value_states], dim=-2)
 
+        return self.key_cache[layer_idx], self.value_cache[layer_idx]
+
+    def clip(self, layer_idx: int, attn_weights: torch.Tensor):
+        attn_weights = attn_weights.detach()
+        aggr_attn_scores = attn_weights.sum(dim=-2)
+        if len(self.attn_cache) <= layer_idx:
+            self.attn_cache.append(aggr_attn_scores)
+            self.attn_count.append(torch.ones_like(aggr_attn_scores) * attn_weights.shape[-2])
+        else:
+            cur_len = self.attn_cache[layer_idx].shape[-1]
+            self.attn_cache[layer_idx] += aggr_attn_scores[..., :cur_len]
+            self.attn_count[layer_idx] += torch.ones_like(aggr_attn_scores[..., :cur_len]) * attn_weights.shape[-2]
+            self.attn_cache[layer_idx] = torch.cat([self.attn_cache[layer_idx], aggr_attn_scores[..., cur_len:]], dim=-1)
+            aggr_attn_counts = (attn_weights[..., cur_len:] > 1e-6).sum(dim=-2)
+            self.attn_count[layer_idx] = torch.cat([self.attn_count[layer_idx], aggr_attn_counts], dim=-1)
 
         key_cache = self.key_cache[layer_idx]
         value_cache = self.value_cache[layer_idx]
