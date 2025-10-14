@@ -19,6 +19,7 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map="auto",
     low_cpu_mem_usage=True,
     torch_dtype="bfloat16",
+    #attn_implementation="flash_attention_2"
     attn_implementation="eager"
 )
 
@@ -26,7 +27,8 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 orig_generate = model.generate
 def patched_generate(*args, **kwargs):
-    model._active_cache = MergeKV(compression_ratio=0.6, window_length=128, top_k=128)
+    #model._active_cache = MergeKV(compression_ratio=0.6, window_length=128, top_k=128)
+    model._active_cache = KNormCache(compression_ratio=0.6, window_length=128)
     kwargs['past_key_values'] = model._active_cache
     kwargs['use_cache'] = True
     out = orig_generate(*args, **kwargs)

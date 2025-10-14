@@ -68,9 +68,6 @@ class KNormCache(Cache):
             A tuple containing the updated key and value states.
         """
         # [bsz, num_heads, seq_len, head_dim]
-        #if layer_idx == 0:
-        #    print('update called', max([cache.shape[-2] for cache in self.key_cache] + [0]), len(self.key_cache), key_states.shape)
-        #print(key_states.shape)
         self.actual_len += key_states.shape[-2]
         if len(self.key_cache) <= layer_idx:
             # Empty cache
@@ -81,6 +78,9 @@ class KNormCache(Cache):
             self.key_cache[layer_idx] = torch.cat([self.key_cache[layer_idx], key_states], dim=-2)
             self.value_cache[layer_idx] = torch.cat([self.value_cache[layer_idx], value_states], dim=-2)
 
+        return self.key_cache[layer_idx], self.value_cache[layer_idx]
+
+    def clip(self, layer_idx, *args, **kwargs):
         key_cache = self.key_cache[layer_idx]
         value_cache = self.value_cache[layer_idx]
 
@@ -171,7 +171,7 @@ class MergeKV(Cache):
 
     def clip(self, layer_idx: int, attn_weights: torch.Tensor):
         attn_weights = attn_weights.detach()
-        aggr_attn_scores = attn_weights.sum(dim=-2)
+        aggr_attn_scores = attn_weights.sum(dim=(-2,-3)) # sum over s1 and h
         if len(self.attn_cache) <= layer_idx:
             self.attn_cache.append(aggr_attn_scores)
             self.attn_count.append(torch.ones_like(aggr_attn_scores) * attn_weights.shape[-2])
@@ -180,11 +180,13 @@ class MergeKV(Cache):
             self.attn_cache[layer_idx] += aggr_attn_scores[..., :cur_len]
             self.attn_count[layer_idx] += torch.ones_like(aggr_attn_scores[..., :cur_len]) * attn_weights.shape[-2]
             self.attn_cache[layer_idx] = torch.cat([self.attn_cache[layer_idx], aggr_attn_scores[..., cur_len:]], dim=-1)
-            aggr_attn_counts = (attn_weights[..., cur_len:] > 1e-6).sum(dim=-2)
+            aggr_attn_counts = (attn_weights[..., cur_len:] > 1e-6).sum(dim=(-2, -3))
             self.attn_count[layer_idx] = torch.cat([self.attn_count[layer_idx], aggr_attn_counts], dim=-1)
 
         key_cache = self.key_cache[layer_idx]
         value_cache = self.value_cache[layer_idx]
+        attn_cache = self.attn_cache[layer_idx]
+        attn_count = self.attn_count[layer_idx]
 
         max_length = self.compression_ratio * self.actual_len
         self.top_k = max(0, round(max_length - self.window_length))
@@ -196,14 +198,21 @@ class MergeKV(Cache):
 
         comp_key, window_key = key_cache[..., :key_length-self.window_length, :], key_cache[..., key_length-self.window_length:,:]
         comp_value, window_value = value_cache[..., :key_length-self.window_length, :], value_cache[..., key_length-self.window_length:,:]
+        comp_attn_score, window_attn_score = attn_cache[..., :key_length-self.window_length], attn_cache[..., key_length-self.window_length:]
+        comp_attn_count, window_attn_count = attn_count[..., :key_length-self.window_length], attn_count[..., key_length-self.window_length:]
 
-        avg_attn_scores = self.attn_cache[layer_idx] / self.attn_count[layer_idx]
-        top_k_idx = avg_attn_scores.topk(self.top_k, -1).indices.sort().values
-        top_k_idx = top_k_idx[..., None].repeat(1, 1, 1, key_cache.shape[-1])
-        top_k_key = torch.gather(comp_key, -2, top_k_idx)
-        top_k_value = torch.gather(comp_value, -2, top_k_idx)
+        avg_attn_score = comp_attn_score / comp_attn_count
+        top_k_idx = avg_attn_score.topk(self.top_k, -1).indices.sort().values
+        top_k_idx_kv = top_k_idx[..., None].repeat(1, key_cache.shape[1], 1, key_cache.shape[-1])
+        top_k_key = torch.gather(comp_key, -2, top_k_idx_kv)
+        top_k_value = torch.gather(comp_value, -2, top_k_idx_kv)
+        top_k_attn_score = torch.gather(comp_attn_score, -1, top_k_idx)
+        top_k_attn_count = torch.gather(comp_attn_count, -1, top_k_idx)
 
         self.key_cache[layer_idx] = torch.cat((top_k_key, window_key), -2)
         self.value_cache[layer_idx] = torch.cat((top_k_value, window_value), -2)
+        self.attn_cache[layer_idx] = torch.cat((top_k_attn_score, window_attn_score), -1)
+        self.attn_count[layer_idx] = torch.cat((top_k_attn_count, window_attn_count), -1)
 
         return self.key_cache[layer_idx], self.value_cache[layer_idx]
+

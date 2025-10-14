@@ -510,6 +510,15 @@ http = [
 ]
 
 [[package]]
+name = "fuzzywuzzy"
+version = "0.18.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/11/4b/0a002eea91be6048a2b5d53c5f1b4dafd57ba2e36eea961d05086d7c28ce/fuzzywuzzy-0.18.0.tar.gz", hash = "sha256:45016e92264780e58972dca1b3d939ac864b78437422beecebb3095f8efd00e8", size = 28888, upload-time = "2020-02-13T21:06:27.054Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/ff/74f23998ad2f93b945c0309f825be92e04e0348e062026998b5eefef4c33/fuzzywuzzy-0.18.0-py2.py3-none-any.whl", hash = "sha256:928244b28db720d1e0ee7587acf660ea49d7e4c632569cad4f1cd7e68a5f0993", size = 18272, upload-time = "2020-02-13T21:06:25.209Z" },
+]
+
+[[package]]
 name = "gpustat"
 version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -603,6 +612,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/72/3a/79a912fbd4d8dd6fb
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c0/5a/9cac0c82afec3d09ccd97c8b6502d48f165f9124db81b4bcb90b4af974ee/jedi-0.19.2-py2.py3-none-any.whl", hash = "sha256:a8ef22bde8490f57fe5c7681a3c83cb58874daf72b4784de3cce5b6ef6edb5b9", size = 1572278, upload-time = "2024-11-11T01:41:40.175Z" },
 ]
+
+[[package]]
+name = "jieba"
+version = "0.42.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c6/cb/18eeb235f833b726522d7ebed54f2278ce28ba9438e3135ab0278d9792a2/jieba-0.42.1.tar.gz", hash = "sha256:055ca12f62674fafed09427f176506079bc135638a14e23e25be909131928db2", size = 19214172, upload-time = "2020-01-20T14:27:23.5Z" }
 
 [[package]]
 name = "jinja2"
@@ -727,6 +742,13 @@ dependencies = [
     { name = "transformers" },
     { name = "word2number" },
     { name = "zstandard" },
+]
+
+[package.optional-dependencies]
+longbench = [
+    { name = "fuzzywuzzy" },
+    { name = "jieba" },
+    { name = "rouge" },
 ]
 
 [package.metadata]
@@ -980,7 +1002,7 @@ dependencies = [
     { name = "jupyter-client" },
     { name = "jupyter-core" },
     { name = "kiwisolver" },
-    { name = "lm-eval" },
+    { name = "lm-eval", extra = ["longbench"] },
     { name = "markupsafe" },
     { name = "matplotlib" },
     { name = "matplotlib-inline" },
@@ -1096,7 +1118,7 @@ requires-dist = [
     { name = "jupyter-client", specifier = "==8.6.3" },
     { name = "jupyter-core", specifier = "==5.7.2" },
     { name = "kiwisolver", specifier = "==1.4.7" },
-    { name = "lm-eval", editable = "eval" },
+    { name = "lm-eval", extras = ["longbench"], editable = "eval" },
     { name = "markupsafe", specifier = "==3.0.2" },
     { name = "matplotlib", specifier = "==3.9.2" },
     { name = "matplotlib-inline", specifier = "==0.1.7" },
