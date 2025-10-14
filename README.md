@@ -42,4 +42,4 @@ $$
 a_j E[e^{2k^* \cdot q}] = E[e^{2k^* \cdot q} e^{(k_j - k^*) \cdot q} / N] 
 $$
 
-Making the reasonable assumption that $k_j - k^*$ is orthogonal to $k^*$ we get that $a_j = \frac{1}{N} E[e^{(k_j - k^*)\cdot q}]$. 
+Making the reasonable assumption that $k_j - k^*$ is orthogonal to $k^*$ we get that $a_j = \frac{1}{N} E[e^{(k_j - k^*)\cdot q}]$, which we can approximate
