@@ -106,7 +106,7 @@ eval.py runs lm_eval on long-bench. I filtered out longer length samples from th
 
 src/attn_patch.py allows me to customize how kv-cache is used in the forward function of the qwen attention module. This is necessary because mergekv and centroid kv need access to the attn_weights which the cache normally doesn't have. 
 
-src/hf_cache.py contains multiple cache implementations, KNormCache, TopKKV (corresponds to Top K Attn in experiment), MergeKV, CentroidKV, HybridKV (using the agglomerative clustering + max aggregate attn key as pivot + using my method of calculating value weighting). 
+src/hf_cache.py contains multiple cache implementations, KNormCache, TopKKV (corresponds to Top K Attn in experiment), MergeKV, CentroidKV, HybridKV (using the agglomerative clustering + max aggregate attn key as pivot + using my method of calculating value weighting). HybridKV is not entirely complete as of writing this. 
 
 ### AI Assistant use:
 
